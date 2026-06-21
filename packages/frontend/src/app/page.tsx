@@ -8,15 +8,11 @@ import { Icon } from '@/components/Icon';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { SegmentCard } from '@/components/SegmentCard';
-import { SettingsDrawer, type FontSize, type Theme, FONT_SIZE_CLASSES, THEME_CLASSES } from '@/components/SettingsDrawer';
 
 export default function Home() {
   const [segments, setSegments] = useState<TranslationSegment[]>([]);
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [fontSize, setFontSize] = useState<FontSize>('md');
-  const [theme, setTheme] = useState<Theme>('dark');
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [connected, setConnected] = useState(false);
   const [showGreeting, setShowGreeting] = useState(false);
 
@@ -60,12 +56,8 @@ export default function Home() {
     if (!container) return;
     const { scrollTop, scrollHeight, clientHeight } = container;
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-    if (isAtBottom) {
-      setAutoScroll(true);
-    } else {
-      setAutoScroll(false);
-      setShowGreeting(false);
-    }
+    if (isAtBottom) setAutoScroll(true);
+    else setAutoScroll(false);
   }, []);
 
   const scrollToBottom = useCallback(() => {
@@ -76,47 +68,33 @@ export default function Home() {
   const toggleTts = useCallback(() => setTtsEnabled(prev => { ttsRef.current.setEnabled(!prev); return !prev; }), []);
   const dismissGreeting = useCallback(() => setShowGreeting(false), []);
 
-  const themeClass = THEME_CLASSES[theme];
-  const fontSizeClass = FONT_SIZE_CLASSES[fontSize];
-
   return (
-    <div className={`h-screen w-screen flex flex-col overflow-hidden ${themeClass} ${fontSizeClass}`}>
-      <header className="flex items-center justify-between px-4 py-3 bg-surface-secondary/80 backdrop-blur-sm border-b border-surface-border flex-shrink-0">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-slate-950 text-slate-100">
+      <header className="flex items-center justify-between px-4 py-3 bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 flex-shrink-0">
         <div className="flex items-center gap-3">
           <StatusDot state={connected ? 'live' : 'error'} label="LIVE" ariaLabel={connected ? 'Connected' : 'Disconnected'} />
-          <h1 className="text-sm font-semibold text-text-primary tracking-tight">Live Translation</h1>
+          <h1 className="text-sm font-semibold text-slate-100 tracking-tight">Live Translation</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="md"
-            onClick={toggleTts}
-            className={`p-2 rounded-lg transition-colors !min-h-0 h-9 w-9 ${ttsEnabled ? 'bg-accent/20 text-accent' : 'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary'}`}
-            aria-label={ttsEnabled ? 'Disable text-to-speech' : 'Enable text-to-speech'}
-            title={ttsEnabled ? 'Disable TTS' : 'Enable TTS'}
-            iconLeft={<Icon name="Headphones" className="w-5 h-5" />}
-          />
-          <Button
-            variant="ghost"
-            size="md"
-            onClick={() => setSettingsOpen(true)}
-            className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-tertiary transition-colors !min-h-0 h-9 w-9"
-            aria-label="Open settings"
-            title="Settings"
-            iconLeft={<Icon name="Settings" className="w-5 h-5" />}
-          />
-        </div>
+        <Button
+          variant="ghost"
+          size="md"
+          onClick={toggleTts}
+          className={`p-2 rounded-lg transition-colors !min-h-0 h-9 w-9 ${ttsEnabled ? 'bg-accent/20 text-accent' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'}`}
+          aria-label={ttsEnabled ? 'Disable text-to-speech' : 'Enable text-to-speech'}
+          title={ttsEnabled ? 'Disable TTS' : 'Enable TTS'}
+          iconLeft={<Icon name="Headphones" className="w-5 h-5" />}
+        />
       </header>
 
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {segments.length === 0 ? (
           <div className="flex-1 flex items-center justify-center px-6">
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-tertiary flex items-center justify-center">
-                <Icon name="Microphone" size="lg" className="text-text-muted" />
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-800 flex items-center justify-center">
+                <Icon name="Microphone" size="lg" className="text-slate-500" />
               </div>
-              <p className="text-lg font-medium text-text-secondary">Waiting for the sermon to begin...</p>
-              <p className="text-sm text-text-muted mt-2">Live translation will appear here automatically</p>
+              <p className="text-lg font-medium text-slate-300">Waiting for the sermon to begin...</p>
+              <p className="text-sm text-slate-500 mt-2">Live translation will appear here automatically</p>
             </div>
           </div>
         ) : (
@@ -139,7 +117,7 @@ export default function Home() {
             )}
             <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 scroll-smooth">
               {segments.map((seg, idx) => (
-                <SegmentCard key={seg.sequence_number} segment={seg} isLatest={idx === segments.length - 1} fontSizeClass={fontSizeClass} />
+                <SegmentCard key={seg.sequence_number} segment={seg} isLatest={idx === segments.length - 1} fontSizeClass="text-base" />
               ))}
             </div>
             {!autoScroll && (
@@ -159,8 +137,6 @@ export default function Home() {
           </>
         )}
       </main>
-
-      <SettingsDrawer open={settingsOpen} fontSize={fontSize} theme={theme} onFontSizeChange={setFontSize} onThemeChange={setTheme} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

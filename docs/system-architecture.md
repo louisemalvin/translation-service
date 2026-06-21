@@ -90,12 +90,13 @@ Given that church sermons are live, the latency between a pastor speaking a sent
 
 ## Resilience & Fault Tolerance
 
-Since this architecture stores no state in a centralized database, the client applications manage fault recovery:
+Since this architecture stores no state in a centralized database, the system is designed to handle issues gracefully:
 
 ### 1. Network Disruption (Speaker's Device)
-- If the Wi-Fi/cellular connection drops momentarily, the local microphone stream is still buffered to IndexedDB via the `MediaRecorder` API.
-- The ASR socket and translation HTTP calls are queued. When connection is restored, the client pushes the queued transcripts in order, ensuring no segments are lost.
+- If the Wi-Fi/cellular connection drops, the ASR websocket connection will disconnect. The Speaker Console instantly updates its visual status indicator (turning red) and presents an error banner.
+- The speaker can tap stop and start to re-establish the connection once network is restored.
 
 ### 2. Viewer Late Joins
 - Since translations are broadcasted ephemerally, a viewer who joins mid-sermon will only see translations from their connection timestamp onward.
-- To make this natural, the viewer UI displays a clean greeting card stating "Live Translation Active. Text will scroll as the speaker talks." and appends segments as they arrive in memory.
+- The viewer UI displays a clean status indicator showing connection health and shows translated segments as they arrive.
+

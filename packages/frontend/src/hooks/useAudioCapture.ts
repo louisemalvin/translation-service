@@ -9,6 +9,7 @@ export interface UseAudioCaptureResult {
   latestTranscribedText: string;
   latestTranslatedText: string;
   error: string | null;
+  volume: number;
 }
 
 export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
@@ -16,6 +17,7 @@ export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
   const [latestTranscribedText, setLatestTranscribedText] = useState('');
   const [latestTranslatedText, setLatestTranslatedText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [volume, setVolume] = useState<number>(0);
 
   const orchestratorRef = useRef<AudioOrchestrator | null>(null);
   const sequenceRef = useRef<number>(1);
@@ -28,8 +30,8 @@ export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
 
       // 1. Fetch Speaker configuration (PIN and active ASR provider choice)
       const pin = sessionStorage.getItem('speaker_pin') || '';
-      const providerType = (localStorage.getItem('asr_provider') || 'deepgram') as 'deepgram' | 'webspeech';
-      const deepgramKey = localStorage.getItem('deepgram_api_key') || '';
+      const providerType = (process.env.NEXT_PUBLIC_ASR_PROVIDER || localStorage.getItem('asr_provider') || 'deepgram') as 'deepgram' | 'webspeech';
+      const deepgramKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY || localStorage.getItem('deepgram_api_key') || '';
 
       // 2. Initialize Supabase Realtime Broadcast Channel
       channelRef.current = supabase.channel('sermon-live');
@@ -92,6 +94,9 @@ export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
             console.error('Translation pipeline error:', apiErr.message);
             setError(`Translation failed: ${apiErr.message}`);
           }
+        },
+        (vol) => {
+          setVolume(vol);
         }
       );
 
@@ -112,6 +117,7 @@ export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
       await channelRef.current.unsubscribe();
       channelRef.current = null;
     }
+    setVolume(0);
     setIsListening(false);
   };
 
@@ -126,5 +132,5 @@ export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
     };
   }, []);
 
-  return { isListening, start, stop, latestTranscribedText, latestTranslatedText, error };
+  return { isListening, start, stop, latestTranscribedText, latestTranslatedText, error, volume };
 }

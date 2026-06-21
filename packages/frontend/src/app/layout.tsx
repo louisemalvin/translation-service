@@ -21,7 +21,6 @@ export const metadata: Metadata = {
     title: "Sermon Translator",
     statusBarStyle: "black-translucent",
   },
-  themeColor: "#0f172a",
 };
 
 export const viewport: Viewport = {

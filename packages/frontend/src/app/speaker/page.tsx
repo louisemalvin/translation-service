@@ -14,7 +14,7 @@ export default function SpeakerPage() {
   const [rememberDevice, setRememberDevice] = useState(false);
   const sermonIdRef = useRef(Date.now().toString());
 
-  const { isListening, start, stop, error } =
+  const { isListening, start, stop, error, volume } =
     useAudioCapture(sermonIdRef.current);
 
   useEffect(() => {
@@ -57,17 +57,61 @@ export default function SpeakerPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 md:p-8 font-sans">
-      <div className="relative flex items-center justify-center mb-8">
-        {isListening && <div className="absolute inset-0 rounded-full bg-status-error/20 border-2 border-status-error/30 animate-pulse-ring" />}
+      <div className="relative flex items-center justify-center w-48 h-48 mb-8">
+        {isListening && (
+          <>
+            {/* Outer ring scaling with volume */}
+            <div
+              className="absolute rounded-full bg-status-error/10 border border-status-error/20 transition-transform duration-75 ease-out"
+              style={{
+                width: '100%',
+                height: '100%',
+                transform: `scale(${1 + (volume / 100) * 0.4})`,
+              }}
+            />
+            {/* Inner ring scaling with volume */}
+            <div
+              className="absolute rounded-full bg-status-error/20 border border-status-error/30 transition-transform duration-100 ease-out"
+              style={{
+                width: '100%',
+                height: '100%',
+                transform: `scale(${1 + (volume / 100) * 0.2})`,
+              }}
+            />
+          </>
+        )}
         <Button
           variant="primary"
           size="lg"
           iconLeft={<Icon name={isListening ? 'Stop' : 'Play'} className="!w-10 !h-10 mb-1" />}
           onClick={isListening ? stop : start}
-          className={`relative z-10 w-48 h-48 rounded-full flex flex-col items-center justify-center gap-2 transition-all duration-300 active:scale-95 cursor-pointer text-center select-none shadow-2xl !p-0 text-white ${gradientClasses}`}
+          className={`relative z-10 w-full h-full rounded-full flex flex-col items-center justify-center gap-2 transition-all duration-300 active:scale-95 cursor-pointer text-center select-none shadow-2xl !p-0 text-white ${gradientClasses}`}
         >
           <span className="font-bold tracking-wider text-base uppercase">{isListening ? 'Stop Broadcast' : 'Start Broadcast'}</span>
         </Button>
+      </div>
+
+      {/* Horizontal VU Meter */}
+      <div className="w-full max-w-md mb-8">
+        <div className="flex justify-between items-center mb-1.5 text-xs text-slate-400 font-medium">
+          <span className="flex items-center gap-1">
+            <Icon name="Microphone" className={`w-3.5 h-3.5 ${isListening ? 'text-accent' : 'text-slate-500'}`} />
+            <span>Input Level</span>
+          </span>
+          <span className="font-mono">{isListening ? volume : 0}%</span>
+        </div>
+        <div className="h-2.5 w-full bg-slate-900 border border-slate-800 rounded-full overflow-hidden relative">
+          <div
+            className={`h-full transition-all duration-75 ease-out rounded-full ${
+              volume > 80
+                ? 'bg-gradient-to-r from-emerald-500 via-yellow-400 to-red-500'
+                : volume > 50
+                ? 'bg-gradient-to-r from-emerald-500 to-yellow-400'
+                : 'bg-emerald-500'
+            }`}
+            style={{ width: `${isListening ? volume : 0}%` }}
+          />
+        </div>
       </div>
 
       {error && (

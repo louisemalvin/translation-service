@@ -6,7 +6,8 @@ This document specifies the user interface design, routing structure, browser We
 
 The Next.js application defines two core visual states:
 - `/` - Viewer Console (Public congregation live translation scrolling feed).
-- `/speaker` - Speaker Console (PIN gate, microphone capture, wake lock, IndexedDB backup recording, translation fetching, and broadcasting).
+- `/speaker` - Speaker Console (PIN gate, microphone capture, wake lock, and real-time broadcasting - zero configuration).
+- `/admin` - Admin Console (PIN gate, ASR provider selection, and API key configuration).
 
 ---
 
@@ -21,7 +22,7 @@ To maintain a zero-cost infrastructure and reduce onboarding friction, write aut
 
 ## Technical Specifications: PWA & Speech Capture Integration
 
-The speaker's device (the pastor's or admin's recording smartphone) runs a Progressive Web App (PWA) configuration on `/speaker` to maximize microphone keep-alive reliability, prevent OS sleep states, and record backup audio.
+The speaker's device (the pastor's or admin's recording smartphone) runs a Progressive Web App (PWA) configuration on `/speaker` to maximize microphone keep-alive reliability and prevent OS sleep states.
 
 ### 1. PWA Keep-Alive & Wake Lock
 To prevent mobile operating systems (particularly iOS Safari and Android Chrome) from locking the screen and suspending the browser's microphone access during a long sermon:
@@ -147,19 +148,17 @@ export class WebSpeechProvider implements SpeechToTextProvider {
   }
 }
 
-// 3. Central Orchestrator managing recording and target ASR
+// 3. Central Orchestrator managing capture pipeline and volume analysis
 export class AudioOrchestrator {
   private stream: MediaStream | null = null;
-  private backupRecorder: MediaRecorder | null = null;
   private isRunning = false;
-  private db: IDBDatabase | null = null;
   private provider: SpeechToTextProvider;
 
   constructor(
-    private sermonId: string,
-    private providerType: 'deepgram' | 'webspeech',
-    private config: { apiKey?: string },
-    private onTextCaptured: (text: string) => void
+    providerType: 'deepgram' | 'webspeech',
+    config: { apiKey?: string },
+    private onTextCaptured: (text: string) => void,
+    private onVolumeChange?: (volume: number) => void
   ) {
     this.provider = providerType === 'deepgram'
       ? new DeepgramSpeechProvider(config.apiKey || '')
@@ -173,65 +172,18 @@ export class AudioOrchestrator {
     // Lock CPU and screen active
     await requestWakeLock();
 
-    // 1. Initialize local IndexedDB store for audio chunks
-    await this.initIndexedDB();
-
-    // 2. Start selected Speech Recognition Provider
+    // Start selected Speech Recognition Provider
     await this.provider.start(this.stream, this.onTextCaptured);
-
-    // 3. Start local audio backup recording
-    this.startBackupRecording();
-  }
-
-  private startBackupRecording() {
-    // MediaRecorder buffers audio to IndexedDB in 5s intervals as a hard safety net
-    this.backupRecorder = new MediaRecorder(this.stream!);
-    this.backupRecorder.ondataavailable = async (event) => {
-      if (event.data.size > 0 && this.db) {
-        const transaction = this.db.transaction(['audio_chunks'], 'readwrite');
-        const store = transaction.objectStore('audio_chunks');
-        await store.put({ 
-          sermon_id: this.sermonId, 
-          timestamp: Date.now(), 
-          blob: event.data 
-        });
-      }
-    };
-    this.backupRecorder.start(5000);
   }
 
   public async stop() {
     this.isRunning = false;
     await this.provider.stop();
-    this.backupRecorder?.stop();
     this.stream?.getTracks().forEach(track => track.stop());
     releaseWakeLock();
   }
-
-  private initIndexedDB(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('SermonAudioBackup', 1);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains('audio_chunks')) {
-          db.createObjectStore('audio_chunks', { keyPath: 'timestamp' });
-  private initIndexedDB(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('SermonAudioBackup', 1);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains('audio_chunks')) {
-          db.createObjectStore('audio_chunks', { keyPath: 'timestamp' });
-        }
-      };
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
-      request.onerror = () => reject(request.error);
-    });
-  }
 }
+
 ```
 
 ---
@@ -405,25 +357,28 @@ In compliance with our rich styling guidelines, the application features a premi
 - **Text-to-Speech (TTS) Integration**:
   - When the "Listen Live" toggle is enabled, the browser's built-in `window.speechSynthesis` speaks incoming translated English segments aloud.
   - The script filters and selects the highest quality english voice available on the device (e.g. Google Neural, iOS Siri, or Edge Natural voices).
-- **Scroll Container**:
-  - Displays translated blocks in chronological order.
-  - Smooth slide/fade animation on content updates.
-  - Auto-scroll lock: Automatically scrolls down as new translations arrive. If the user scrolls up manually to read past text, auto-scroll pauses and displays a floating "Scroll to bottom" button.
+- **Teleprompter Viewport**:
+  - Displays only the latest translated sentence large and bright in the center.
+  - Displays the previous 2 sentences pushed up and dimmed (50% opacity) for short-term context.
+  - Fades out and automatically discards older segments, preventing visual clutter and ensuring viewers stay focused on the present sermon moment.
 - **States & Typography**:
-  - The live scrolling viewport renders translated segments sequentially. Since translations are ephemeral, segments fade in and append in real-time.
-  - High-contrast crisp white (`text-slate-100`) text for readability in dimly-lit church halls.
-- **Configuration Panel (Drawer)**:
-  - Font Size adjustments: `Text-SM`, `Text-MD` (default), `Text-LG`, `Text-XL`, `Text-2XL` (for elderly accessibility).
-  - Background Theme: Dark Mode (Default), Midnight Blue, Sepia, Light Mode (High Contrast).
+  - High-contrast crisp white text for readability in dimly-lit church halls.
+- **Persistent Accessibility Toolbar**:
+  - Font Size adjustments: Buttons to increment/decrement the text size scale.
+  * Single Premium Theme: Styled in deep slate/near-black to eliminate light glare for adjacent congregation members.
 
 ### 2. Speaker Console (`/speaker`)
 - **PIN Gate Screen**: Simple entry to input the session PIN before launching the interface.
 - **Main Controls**: A large, easy-to-tap "Start Broadcast" / "Stop Broadcast" toggle button.
 - **Visual Feedback**:
-  - VU Meter: Animating wave matching microphone volume.
-  - Connection Indicator: Glowing green dot (Active WebSocket connection to Deepgram) or red warning dot.
-- **Backup Recording Actions**:
-  - Displays size of audio chunks currently buffered in IndexedDB.
-  - **Download Audio**: Compiles all IndexedDB audio chunks into a single download WebM/ogg file on the device.
-  - **Clear Cache**: Purges the IndexedDB database once the audio is safely archived.
+  - VU Meter: Animating wave surrounding or next to the broadcast button matching active microphone volume levels.
+  - Connection Indicator: Glowing status light (Green for active websocket broadcast, Red for disconnected/inactive).
+
+### 3. Admin Console (`/admin`)
+- **PIN Gate Screen**: Simple entry to input the session PIN before launching the interface.
+- **ASR & API Configuration**:
+  - ASR Provider Selector: Select active engine (Deepgram vs Web Speech API).
+  - API Key Field: Input field to save the Deepgram API Key safely in browser `localStorage`.
+
+
 

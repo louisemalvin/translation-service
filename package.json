@@ -1,0 +1,15 @@
+{
+  "name": "translation-pipeline",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter frontend dev\" \"supabase start\"",
+    "build": "pnpm --filter shared build && pnpm --filter frontend build",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "typescript": "^5.2.2",
+    "vitest": "^1.0.0"
+  }
+}

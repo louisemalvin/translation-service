@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { AudioOrchestrator } from '../services/speech/AudioOrchestrator';
 import { MAX_HISTORY_WINDOW } from 'shared';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface UseAudioCaptureResult {
   isListening: boolean;
@@ -13,7 +14,7 @@ export interface UseAudioCaptureResult {
   volume: number;
 }
 
-export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
+export function useAudioCapture(): UseAudioCaptureResult {
   const [isListening, setIsListening] = useState(false);
   const [latestTranscribedText, setLatestTranscribedText] = useState('');
   const [latestTranslatedText, setLatestTranslatedText] = useState('');
@@ -23,7 +24,7 @@ export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
   const orchestratorRef = useRef<AudioOrchestrator | null>(null);
   const sequenceRef = useRef<number>(1);
   const historyRef = useRef<{ raw: string; translated: string }[]>([]);
-  const channelRef = useRef<any>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   const start = async () => {
     try {
@@ -90,8 +91,9 @@ export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
             historyRef.current = updatedHistory;
 
             sequenceRef.current += 1;
-          } catch (apiErr: any) {
-            setError(`Translation failed: ${apiErr.message}`);
+          } catch (apiErr: unknown) {
+            const errMsg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+            setError(`Translation failed: ${errMsg}`);
           }
         },
         (vol) => {
@@ -101,8 +103,9 @@ export function useAudioCapture(sermonId: string): UseAudioCaptureResult {
 
       await orchestratorRef.current.start();
       setIsListening(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setError(errMsg);
       setIsListening(false);
     }
   };

@@ -48,7 +48,7 @@ export class AudioOrchestrator {
     if (!this.stream || !this.onVolumeChange) return;
 
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextClass) return;
 
       this.audioContext = new AudioContextClass();

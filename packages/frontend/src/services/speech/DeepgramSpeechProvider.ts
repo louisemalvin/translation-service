@@ -24,7 +24,7 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
 
         this.socket.onopen = async () => {
           try {
-            this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+            this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)({
               sampleRate: SAMPLE_RATE,
             });
 
@@ -60,12 +60,12 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
             if (isFinal && transcript && transcript.trim().length > 0) {
               onTextCaptured(transcript.trim());
             }
-          } catch (err) {
+          } catch {
             // Ignored
           }
         };
 
-        this.socket.onerror = (err) => {
+        this.socket.onerror = () => {
           if (!isInitialized) {
             isInitialized = true;
             reject(new Error('Deepgram socket connection failed'));
@@ -101,14 +101,14 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
         await this.audioContext.close();
         this.audioContext = null;
       }
-    } catch (err) {
+    } catch {
       // Ignored
     }
 
     if (this.socket) {
       try {
         this.socket.close();
-      } catch (err) {
+      } catch {
         // Ignored
       } finally {
         this.socket = null;

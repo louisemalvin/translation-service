@@ -32,6 +32,7 @@ export default function Home() {
   const hasReceivedSegmentRef = useRef(false);
 
   useEffect(() => {
+    const currentTts = ttsRef.current;
     const unsubscribe = subscribeToLiveSermon((segment: TranslationSegment) => {
       setSegments((prev) => [...prev, segment]);
       if (!hasReceivedSegmentRef.current) {
@@ -43,7 +44,7 @@ export default function Home() {
     });
     return () => {
       unsubscribe();
-      ttsRef.current.setEnabled(false);
+      currentTts.setEnabled(false);
     };
   }, []);
 

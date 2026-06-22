@@ -30,7 +30,9 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    setConnected(true);
+    const timer = setTimeout(() => {
+      setConnected(true);
+    }, 0);
 
     // Subscribe to the live broadcast feed for debugging logs
     const unsubscribe = subscribeToLiveSermon((segment: TranslationSegment) => {
@@ -39,6 +41,7 @@ export default function AdminPage() {
     });
 
     return () => {
+      clearTimeout(timer);
       unsubscribe();
     };
   }, [isAuthenticated]);

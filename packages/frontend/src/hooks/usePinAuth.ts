@@ -8,12 +8,15 @@ export function usePinAuth() {
   const [rememberDevice, setRememberDevice] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
     const pin = sessionStorage.getItem('speaker_pin') || localStorage.getItem('speaker_pin');
-    if (pin) {
-      sessionStorage.setItem('speaker_pin', pin);
-      setIsAuthenticated(true);
-    }
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+      if (pin) {
+        sessionStorage.setItem('speaker_pin', pin);
+        setIsAuthenticated(true);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handlePinSubmit = (e: FormEvent) => {

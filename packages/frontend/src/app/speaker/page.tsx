@@ -1,6 +1,5 @@
 'use client';
 
-import { useRef } from 'react';
 import { useAudioCapture } from '../../hooks/useAudioCapture';
 import { Icon } from '@/components/Icon';
 import { Button } from '@/components/Button';
@@ -9,10 +8,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { usePinAuth } from '@/hooks/usePinAuth';
 
 export default function SpeakerPage() {
-  const sermonIdRef = useRef(Date.now().toString());
-
-  const { isListening, start, stop, error, volume } =
-    useAudioCapture(sermonIdRef.current);
+  const { isListening, start, stop, error, volume } = useAudioCapture();
 
   const {
     isMounted,

@@ -4,6 +4,16 @@ A low-latency, real-time Indonesian to English voice translation pipeline. It tr
 
 The architecture is stateless and stores no translation data, using ephemeral broadcast channels to eliminate database storage requirements.
 
+## 👥 User Roles & Goals
+
+This system supports three distinct user experiences:
+
+*   **The Speaker (e.g., Presenter / Pastor)**: Speaks Indonesian naturally and broadcasts instant English translations. The client PWA keeps their phone screen active (via Screen Wake Lock API) and displays live volume input levels.
+*   **The Viewer (e.g., Attendee)**: Views a scrolling, high-contrast, low-glare translation feed on their phone. Can toggle text-to-speech to listen through headphones. Requires no login or setup.
+*   **The Administrator (e.g., AV Tech)**: Monitors translation packets via a debugger console. Deploys the system statelessly at $0 infrastructure cost.
+
+For a detailed breakdown of user intents, mental models, and how they map down to frontend and backend services, refer to the **[User Journey & System Goals Specification](file:///home/ltanaka/github/translation-service/docs/user-journey-and-goals.md)**.
+
 ## Features
 
 - **Audio Capture & ASR**: Real-time microphone audio streaming to Deepgram WebSockets with browser-native Web Speech API as a fallback.

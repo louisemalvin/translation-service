@@ -1,5 +1,5 @@
 {
-  "name": "translation-pipeline",
+  "name": "speechcraft",
   "private": true,
   "scripts": {
     "dev": "concurrently \"pnpm --filter frontend dev\" \"supabase start\"",

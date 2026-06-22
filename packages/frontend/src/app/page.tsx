@@ -23,6 +23,7 @@ const AUTO_SCROLL_THRESHOLD = 80; // px from bottom to consider "at bottom"
 
 export default function Home() {
   const [segments, setSegments] = useState<TranslationSegment[]>([]);
+  const [interimText, setInterimText] = useState('');
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [fontSizeIdx, setFontSizeIdx] = useState(5); // Default to 'text-3xl' (index 5)
   const [isScrolledUp, setIsScrolledUp] = useState(false);
@@ -35,11 +36,17 @@ export default function Home() {
   // Subscription
   useEffect(() => {
     const currentTts = ttsRef.current;
-    const unsubscribe = subscribeToLiveSermon((segment: TranslationSegment) => {
-      if (seenSeqRef.current.has(segment.sequence_number)) return;
-      seenSeqRef.current.add(segment.sequence_number);
-      setSegments((prev) => [...prev, segment]);
-    });
+    const unsubscribe = subscribeToLiveSermon(
+      (segment: TranslationSegment) => {
+        if (seenSeqRef.current.has(segment.sequence_number)) return;
+        seenSeqRef.current.add(segment.sequence_number);
+        setSegments((prev) => [...prev, segment]);
+        setInterimText('');
+      },
+      (text: string) => {
+        setInterimText(text);
+      }
+    );
 
     return () => {
       unsubscribe();
@@ -56,7 +63,7 @@ export default function Home() {
     prevSegmentsLengthRef.current = segments.length;
   }, [segments, ttsEnabled]);
 
-  // Auto-scroll on new segments
+  // Auto-scroll on new segments or interim transcript updates
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -67,7 +74,7 @@ export default function Home() {
     if (distanceFromBottom <= AUTO_SCROLL_THRESHOLD) {
       container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }
-  }, [segments]);
+  }, [segments, interimText]);
 
   const toggleTts = useCallback(() => setTtsEnabled(prev => { ttsRef.current.setEnabled(!prev); return !prev; }), []);
 
@@ -103,7 +110,7 @@ export default function Home() {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto overscroll-contain px-6 md:px-12 py-8 relative"
       >
-        {segments.length === 0 ? (
+        {segments.length === 0 && !interimText ? (
           /* Empty state */
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -128,6 +135,19 @@ export default function Home() {
                 className={`${ALL_SIZES[fontSizeIdx]} leading-relaxed tracking-wide`}
               />
             ))}
+
+            {interimText && (
+              <div className="flex items-center gap-3 bg-surface-secondary/40 border border-surface-border/30 border-l-4 border-l-accent/40 rounded-xl p-4 shadow-sm text-text-secondary/80 opacity-75 animate-pulse transition-all duration-300">
+                <div className="relative flex h-2 w-2 flex-shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+                </div>
+                <p className={`${ALL_SIZES[fontSizeIdx]} italic font-light leading-relaxed tracking-wide`}>
+                  {interimText}
+                </p>
+              </div>
+            )}
+
             {/* Bottom spacer so last segment isn't flush against the edge */}
             <div className="h-4 flex-shrink-0" />
           </div>

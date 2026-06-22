@@ -53,7 +53,12 @@ export class WebSpeechProvider implements SpeechToTextProvider {
   private recognition: SpeechRecognition | null = null;
   private isRunning = false;
 
-  public start(stream: MediaStream, onTextCaptured: (text: string) => void): Promise<void> {
+  public start(
+    stream: MediaStream,
+    onTextCaptured: (text: string) => void,
+    onInterimTextCaptured?: (text: string) => void,
+    onUtteranceEnd?: () => void
+  ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       try {
         const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;

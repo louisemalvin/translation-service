@@ -7,16 +7,22 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
+  private keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(private token: string) {}
 
-  public start(stream: MediaStream, onTextCaptured: (text: string) => void): Promise<void> {
+  public start(
+    stream: MediaStream,
+    onTextCaptured: (text: string) => void,
+    onInterimTextCaptured?: (text: string) => void,
+    onUtteranceEnd?: () => void
+  ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       let isInitialized = false;
 
       try {
         this.socket = new WebSocket(
-          'wss://api.au.deepgram.com/v1/listen?language=id&model=nova-3&encoding=linear16&sample_rate=16000&punctuate=true&endpointing=500',
+          'wss://api.au.deepgram.com/v1/listen?language=id&model=nova-3&encoding=linear16&sample_rate=16000&punctuate=true&interim_results=true&utterance_end_ms=1000',
           ['token', this.token]
         );
 
@@ -41,6 +47,12 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
             this.source.connect(this.workletNode);
             this.workletNode.connect(this.audioContext.destination);
 
+            this.keepAliveInterval = setInterval(() => {
+              if (this.socket?.readyState === WebSocket.OPEN) {
+                this.socket.send(JSON.stringify({ type: 'KeepAlive' }));
+              }
+            }, 5000);
+
             isInitialized = true;
             resolve();
           } catch (err) {
@@ -54,11 +66,21 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
         this.socket.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            const transcript = data.channel?.alternatives?.[0]?.transcript;
-            const isFinal = data.is_final;
+            if (data.type === 'Results') {
+              const transcript = data.channel?.alternatives?.[0]?.transcript;
+              const isFinal = data.is_final;
 
-            if (isFinal && transcript && transcript.trim().length > 0) {
-              onTextCaptured(transcript.trim());
+              if (transcript && transcript.trim().length > 0) {
+                if (isFinal) {
+                  onTextCaptured(transcript.trim());
+                } else if (onInterimTextCaptured) {
+                  onInterimTextCaptured(transcript.trim());
+                }
+              }
+            } else if (data.type === 'UtteranceEnd') {
+              if (onUtteranceEnd) {
+                onUtteranceEnd();
+              }
             }
           } catch {
             // Ignored
@@ -66,6 +88,7 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
         };
 
         this.socket.onerror = () => {
+          this.clearKeepAlive();
           if (!isInitialized) {
             isInitialized = true;
             reject(new Error('Deepgram socket connection failed'));
@@ -73,6 +96,7 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
         };
 
         this.socket.onclose = () => {
+          this.clearKeepAlive();
           if (!isInitialized) {
             isInitialized = true;
             reject(new Error('Deepgram socket closed before opening'));
@@ -88,6 +112,7 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
   }
 
   public async stop(): Promise<void> {
+    this.clearKeepAlive();
     try {
       if (this.workletNode) {
         this.workletNode.disconnect();
@@ -113,6 +138,13 @@ export class DeepgramSpeechProvider implements SpeechToTextProvider {
       } finally {
         this.socket = null;
       }
+    }
+  }
+
+  private clearKeepAlive(): void {
+    if (this.keepAliveInterval !== null) {
+      clearInterval(this.keepAliveInterval);
+      this.keepAliveInterval = null;
     }
   }
 }

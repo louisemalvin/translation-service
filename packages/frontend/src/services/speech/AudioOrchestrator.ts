@@ -16,7 +16,9 @@ export class AudioOrchestrator {
     providerType: 'deepgram' | 'webspeech',
     config: { apiKey?: string },
     private onTextCaptured: (text: string) => void,
-    private onVolumeChange?: (volume: number) => void
+    private onVolumeChange?: (volume: number) => void,
+    private onInterimTextCaptured?: (text: string) => void,
+    private onUtteranceEnd?: () => void
   ) {
     if (providerType === 'deepgram') {
       this.provider = new DeepgramSpeechProvider(config.apiKey || '');
@@ -29,7 +31,12 @@ export class AudioOrchestrator {
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     this.isRunning = true;
     await requestWakeLock();
-    await this.provider.start(this.stream, this.onTextCaptured);
+    await this.provider.start(
+      this.stream,
+      this.onTextCaptured,
+      this.onInterimTextCaptured,
+      this.onUtteranceEnd
+    );
     this.startVolumeAnalysis();
   }
 

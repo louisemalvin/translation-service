@@ -12,13 +12,19 @@ export interface TranslationSegment {
 }
 
 export function subscribeToLiveSermon(
-  onSegmentReceived: (segment: TranslationSegment) => void
+  onSegmentReceived: (segment: TranslationSegment) => void,
+  onInterimReceived?: (text: string) => void
 ): () => void {
   const channel = supabase.channel('sermon-live');
 
   channel
     .on('broadcast', { event: 'translation_segment' }, ({ payload }) => {
       onSegmentReceived(payload as TranslationSegment);
+    })
+    .on('broadcast', { event: 'interim_transcript' }, ({ payload }) => {
+      if (onInterimReceived && payload && typeof payload.text === 'string') {
+        onInterimReceived(payload.text);
+      }
     })
     .subscribe();
 

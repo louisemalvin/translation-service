@@ -153,6 +153,26 @@ export function useAudioCapture(): UseAudioCaptureResult {
         }, ACCUMULATION_TIMEOUT_MS);
       };
 
+      const onInterimTextCaptured = (interimRawText: string) => {
+        const stableText = accumulationBufferRef.current.join(' ');
+        const combinedPreview = stableText ? `${stableText} ${interimRawText}` : interimRawText;
+        if (channelRef.current) {
+          void channelRef.current.send({
+            type: 'broadcast',
+            event: 'interim_transcript',
+            payload: { text: combinedPreview },
+          });
+        }
+      };
+
+      const onUtteranceEnd = () => {
+        if (accumulationTimerRef.current !== null) {
+          clearTimeout(accumulationTimerRef.current);
+          accumulationTimerRef.current = null;
+        }
+        void flushBuffer();
+      };
+
       // 5. Create orchestrator with accumulating callback
       orchestratorRef.current = new AudioOrchestrator(
         providerType,
@@ -160,7 +180,9 @@ export function useAudioCapture(): UseAudioCaptureResult {
         onTextCaptured,
         (vol) => {
           setVolume(vol);
-        }
+        },
+        onInterimTextCaptured,
+        onUtteranceEnd
       );
 
       await orchestratorRef.current.start();

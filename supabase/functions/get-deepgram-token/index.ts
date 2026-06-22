@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // Centralized Configuration Constants
 const MAX_PIN_FAILURES = 5;
 const PIN_BLOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-const DEEPGRAM_TOKEN_TTL_SECONDS = 3600; // 1 hour
+const DEEPGRAM_TOKEN_TTL_SECONDS = 14400; // 4 hours
 
 // In-memory rate limiting and blocking states
 const pinFailures = new Map<string, { count: number; blockedUntil: number }>();
